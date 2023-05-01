@@ -1,0 +1,206 @@
+Створення таблиці "Студенти"
+
+CREATE TABLE Students (
+  id INTEGER PRIMARY KEY,
+  name TEXT,
+  group_id INTEGER,
+  FOREIGN KEY (group_id) REFERENCES Groups(id)
+);
+
+Створення таблиці "Групи"
+
+CREATE TABLE Groups (
+  id INTEGER PRIMARY KEY,
+  name TEXT
+);
+
+Створення таблиці "Викладачі"
+
+CREATE TABLE Teachers (
+  id INTEGER PRIMARY KEY,
+  name TEXT
+);
+
+Створення таблиці "Предмети"
+
+CREATE TABLE Subjects (
+  id INTEGER PRIMARY KEY,
+  name TEXT,
+  teacher_id INTEGER,
+  FOREIGN KEY (teacher_id) REFERENCES Teachers(id)
+);
+
+Створення таблиці "Оцінки"
+
+CREATE TABLE Marks (
+  id INTEGER PRIMARY KEY,
+  student_id INTEGER,
+  subject_id INTEGER,
+  mark INTEGER,
+  date TEXT,
+  FOREIGN KEY (student_id) REFERENCES Students(id),
+  FOREIGN KEY (subject_id) REFERENCES Subjects(id)
+);
+
+-----------------------------------------------------
+Заповнення таблиці "Студенти" 
+
+INSERT INTO Students (name, group_id)
+SELECT 
+  Faker.name(),
+  (SELECT id FROM Groups ORDER BY RANDOM() LIMIT 1)
+FROM 
+  generate_series(1, 30);
+
+Заповнення таблиці "Викладачі"
+
+INSERT INTO Teachers (name)
+SELECT Faker.name() FROM generate_series(1, 5);
+
+Заповнення таблиці "Предмети" 
+
+INSERT INTO Subjects (name, teacher_id)
+SELECT 
+  Faker.job(),
+  (SELECT id FROM Teachers ORDER BY RANDOM() LIMIT 1)
+FROM 
+  generate_series(1, 8);
+
+Заповнення таблиці "Оцінки"
+
+INSERT INTO Marks (student_id, subject_id, mark, date)
+SELECT 
+  s.id,
+  sub.id,
+  random_int(60, 100),
+  to_char(Faker.date_between('-1 year', 'today'), 'YYYY-MM-DD')
+FROM 
+  Students s, Subjects sub
+WHERE 
+  random() < 0.2; 
+
+--------------------------------------
+
+Знайти 5 студентів із найбільшим середнім балом з усіх предметів.
+
+SELECT 
+  s.name, 
+  AVG(m.mark) as avg_mark
+FROM 
+  Students s, Marks m
+WHERE 
+  s.id = m.student_id
+GROUP BY 
+  s.id
+ORDER BY 
+  avg_mark DESC
+LIMIT 
+  5;
+
+Знайти студента із найвищим середнім балом з певного предмета 
+
+SELECT 
+  s.name,
+  AVG(m.mark) as avg_mark
+FROM 
+  Students s, Marks m, Subjects sub
+WHERE 
+  s.id = m.student_id AND
+  m.subject_id = sub.id AND
+  sub.name = 'subject_name'
+GROUP BY 
+  s.id
+ORDER BY 
+  avg_mark DESC
+LIMIT 
+  1;
+
+Знайти середній бал у групах з певного предмета
+
+SELECT 
+  g.name, 
+  AVG(m.mark) as avg_mark
+FROM 
+  Groups g, Students s, Marks m, Subjects sub
+WHERE 
+  g.id = s.group_id AND
+  s.id = m.student_id AND
+  m.subject_id = sub.id AND
+  sub.name = 'subject_name'
+GROUP BY 
+  g.id;
+
+Знайти середній бал на потоці (по всій таблиці оцінок).
+
+SELECT 
+  AVG(mark) as avg_mark
+FROM 
+  Marks;
+
+Знайти які курси читає певний викладач
+
+SELECT 
+  sub.name
+FROM 
+  Teachers t, Subjects sub
+WHERE 
+  t.id = sub.teacher_id AND
+  t.name = 'teacher_name';
+
+Знайти список студентів у певній групі 
+
+SELECT 
+  name
+FROM 
+  Students
+WHERE 
+  group_id = (SELECT id FROM Groups WHERE name = 'group_name');
+
+Знайти оцінки студентів у окремій групі з певного предмета
+
+SELECT 
+  s.name, 
+  m.mark
+FROM 
+  Students s, Marks m, Subjects sub, Groups g
+WHERE 
+  s.id = m.student_id AND
+  m.subject_id = sub.id AND
+  s.group_id = g.id AND
+  g.name = 'group_name' AND
+  sub.name = 'subject_name';
+
+Знайти середній бал, який ставить певний викладач зі своїх предметів 
+
+SELECT 
+  AVG(m.mark) as avg_mark
+FROM 
+  Marks m, Subjects sub, Teachers t
+WHERE 
+  m.subject_id = sub.id AND
+  sub.teacher_id = t.id AND
+  t.name = 'teacher_name';
+
+Знайти список курсів, які відвідує студент 
+
+SELECT 
+  sub.name
+FROM 
+  Students s, Marks m, Subjects sub
+WHERE 
+  s.id = m.student_id AND
+  m.subject_id = sub.id AND
+  s.name = 'student_name';
+
+Список курсів, які певному студенту читає певний викладач 
+
+SELECT 
+  sub.name
+FROM 
+  Students s, Marks m, Subjects sub, Teachers t
+WHERE 
+  s.id = m.student_id AND
+  m.subject_id = sub.id AND
+  sub.teacher_id = t.id AND
+  s.name = 'student_name' AND
+  t.name = 'teacher_name';
