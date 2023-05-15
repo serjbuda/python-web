@@ -87,3 +87,30 @@ def select_10(student_name, teacher_name):
         filter(Student.name == student_name, Teacher.name == teacher_name)
     result = session.execute(query)
     return result.fetchall()
+
+def select_advanced_1(teacher_name, student_name):
+    query = session.query(func.avg(Grade.grade)).\
+        join(Subject).\
+        join(Teacher).\
+        join(Student).\
+        filter(Teacher.name == teacher_name, Student.name == student_name)
+    result = session.execute(query)
+    return result.scalar()
+
+def select_advanced_2(group_name, subject_name):
+    subquery = session.query(func.max(Grade.date)).\
+        join(Student).\
+        join(Group).\
+        join(Subject).\
+        filter(Group.name == group_name, Subject.name == subject_name).\
+        group_by(Student.id).\
+        subquery()
+
+    query = session.query(Student, Grade).\
+        join(Group).\
+        join(Grade).\
+        join(Subject).\
+        filter(Group.name == group_name, Subject.name == subject_name, Grade.date == subquery).\
+        order_by(Student.id)
+    result = session.execute(query)
+    return result.fetchall()
